@@ -1,0 +1,1819 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xadrez Ana Paula — Clube & Arena Online</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <!-- Font Awesome para ícones elegantes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chess.js para motor de regras 100% preciso (roque, en passant, xeque-mate, afogamento, promoção) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #161512;
+            color: #e5e5e5;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .font-serif-brand {
+            font-family: 'Playfair Display', serif;
+        }
+
+        /* Cores clássicas e acolhedoras do tabuleiro */
+        .sq-light {
+            background-color: #f0d9b5;
+            color: #b58863;
+        }
+        .sq-dark {
+            background-color: #b58863;
+            color: #f0d9b5;
+        }
+
+        /* Destaques do tabuleiro */
+        .sq-selected {
+            background-color: rgba(20, 85, 30, 0.55) !important;
+        }
+        .sq-last-move {
+            background-color: rgba(155, 199, 0, 0.45) !important;
+        }
+        .sq-check {
+            background: radial-gradient(ellipse at center, rgba(255, 0, 0, 0.9) 0%, rgba(231, 0, 0, 0.65) 45%, rgba(169, 0, 0, 0) 80%) !important;
+        }
+
+        /* Indicadores de movimento válido */
+        .hint-dot {
+            width: 28%;
+            height: 28%;
+            border-radius: 50%;
+            background-color: rgba(20, 85, 30, 0.38);
+            pointer-events: none;
+        }
+        .hint-capture {
+            width: 84%;
+            height: 84%;
+            border-radius: 50%;
+            border: 5px solid rgba(20, 85, 30, 0.42);
+            pointer-events: none;
+        }
+
+        /* Animação suave nas peças SVG */
+        .piece-svg {
+            width: 84%;
+            height: 84%;
+            transition: transform 0.12s ease;
+            filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+            pointer-events: none;
+        }
+        .square:hover .piece-svg {
+            transform: scale(1.05);
+        }
+
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e1c18;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3d3932;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #575147;
+        }
+
+        /* Botões estilizados */
+        .btn-gold {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            transition: all 0.2s ease;
+        }
+        .btn-gold:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+        .btn-gold:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <!-- CABEÇALHO / IDENTIDADE VISUAL "ANA PAULA" -->
+    <header class="bg-[#1e1c18] border-b border-[#2e2b25] shadow-lg sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <!-- Marca -->
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center shadow-md border border-amber-400/30">
+                    <i class="fa-solid fa-chess-queen text-2xl text-white drop-shadow"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-serif-brand text-xl sm:text-2xl font-bold tracking-wide text-amber-100">
+                            Xadrez <span class="text-amber-400">Ana Paula</span>
+                        </h1>
+                        <span class="hidden sm:inline-block text-[10px] uppercase tracking-widest bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold">
+                            Clube & Arena
+                        </span>
+                    </div>
+                    <p class="text-xs text-stone-400">Estratégia, elegância e partidas em tempo real</p>
+                </div>
+            </div>
+
+            <!-- Controles Rápidos do Cabeçalho -->
+            <div class="flex items-center gap-2">
+                <button id="btn-sound" onclick="toggleSound()" title="Alternar Som" class="p-2.5 rounded-lg bg-[#292620] hover:bg-[#36322a] text-stone-300 border border-[#3a362e] transition">
+                    <i id="icon-sound" class="fa-solid fa-volume-high text-amber-400"></i>
+                </button>
+                <button onclick="flipBoard()" title="Inverter Tabuleiro" class="p-2.5 rounded-lg bg-[#292620] hover:bg-[#36322a] text-stone-300 border border-[#3a362e] transition flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-retweet text-amber-400"></i>
+                    <span class="hidden md:inline">Inverter</span>
+                </button>
+                <button onclick="openModeModal()" class="btn-gold text-white font-semibold px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-chess-board"></i>
+                    <span>Novo Jogo / Salas</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ÁREA PRINCIPAL DO JOGO -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- COLUNA DO TABULEIRO (7 colunas no desktop) -->
+        <div class="lg:col-span-7 flex flex-col items-center w-full">
+            
+            <!-- Barra do Jogador Superior (Adversário) -->
+            <div class="w-full max-w-[560px] flex items-center justify-between bg-[#211f1b] border border-[#302d26] rounded-t-xl px-4 py-2.5">
+                <div class="flex items-center gap-3">
+                    <div id="top-avatar" class="w-9 h-9 rounded-lg bg-stone-800 border border-stone-600 flex items-center justify-center text-amber-400 font-bold">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span id="top-player-name" class="font-semibold text-sm sm:text-base text-stone-100">Ana Paula (Nível Médio)</span>
+                            <span id="top-player-badge" class="text-[10px] px-2 py-0.5 rounded bg-stone-700 text-stone-300 font-medium">Pretas</span>
+                        </div>
+                        <!-- Peças capturadas pelo jogador superior -->
+                        <div id="top-captured" class="flex items-center gap-0.5 h-5 text-xs text-stone-400 mt-0.5"></div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div id="ai-thinking" class="hidden items-center gap-1.5 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i>
+                        <span>Pensando...</span>
+                    </div>
+                    <div id="top-clock" class="font-mono text-base sm:text-lg font-bold px-3 py-1 rounded-lg bg-[#161512] text-stone-400 border border-[#2e2b25]">
+                        10:00
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTAINER DO TABULEIRO RESPONSIVO -->
+            <div class="w-full max-w-[560px] aspect-square bg-[#2b2722] p-1.5 sm:p-2.5 shadow-2xl border-x border-[#302d26] relative">
+                <div id="chessboard" class="w-full h-full grid grid-cols-8 grid-rows-8 rounded overflow-hidden shadow-inner">
+                    <!-- As 64 casas são geradas dinamicamente via JS -->
+                </div>
+
+                <!-- Overlay de Promoção de Peão -->
+                <div id="promotion-modal" class="hidden absolute inset-0 bg-black/75 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-4">
+                    <div class="bg-[#24211c] border border-amber-500/40 rounded-2xl p-5 shadow-2xl text-center max-w-xs w-full">
+                        <h3 class="font-serif-brand text-lg font-bold text-amber-200 mb-1">Promoção de Peão</h3>
+                        <p class="text-xs text-stone-400 mb-4">Escolha a peça para promover:</p>
+                        <div id="promotion-choices" class="grid grid-cols-4 gap-2">
+                            <!-- Opções de promoção inseridas via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Banner de Fim de Jogo -->
+                <div id="gameover-banner" class="hidden absolute inset-x-4 top-1/2 -translate-y-1/2 bg-[#1f1c18]/95 backdrop-blur-md border-2 border-amber-500/60 rounded-2xl p-5 shadow-2xl z-20 text-center">
+                    <div class="w-12 h-12 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center mx-auto mb-2 text-amber-400 text-xl">
+                        <i class="fa-solid fa-trophy"></i>
+                    </div>
+                    <h2 id="gameover-title" class="font-serif-brand text-2xl font-bold text-amber-100">Xeque-mate!</h2>
+                    <p id="gameover-subtitle" class="text-sm text-stone-300 mt-1 mb-4">As Brancas venceram a partida.</p>
+                    <div class="flex justify-center gap-3">
+                        <button onclick="requestNewGame()" class="btn-gold text-white font-semibold px-5 py-2 rounded-xl text-sm shadow">
+                            Jogar Novamente
+                        </button>
+                        <button onclick="hideGameOverBanner()" class="bg-[#2e2a24] hover:bg-[#3a352d] text-stone-200 px-4 py-2 rounded-xl text-sm border border-[#423d34]">
+                            Analisar Tabuleiro
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barra do Jogador Inferior (Você) -->
+            <div class="w-full max-w-[560px] flex items-center justify-between bg-[#211f1b] border border-[#302d26] rounded-b-xl px-4 py-2.5">
+                <div class="flex items-center gap-3">
+                    <div id="bottom-avatar" class="w-9 h-9 rounded-lg bg-amber-600/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span id="bottom-player-name" class="font-semibold text-sm sm:text-base text-stone-100">Você</span>
+                            <span id="bottom-player-badge" class="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium">Brancas</span>
+                        </div>
+                        <!-- Peças capturadas pelo jogador inferior -->
+                        <div id="bottom-captured" class="flex items-center gap-0.5 h-5 text-xs text-stone-400 mt-0.5"></div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div id="bottom-clock" class="font-mono text-base sm:text-lg font-bold px-3 py-1 rounded-lg bg-[#161512] text-amber-300 border border-amber-500/30">
+                        10:00
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAINEL LATERAL DE INFORMAÇÕES E CONTROLES (5 colunas no desktop) -->
+        <div class="lg:col-span-5 w-full flex flex-col gap-4">
+
+            <!-- Card de Status da Partida / Sala Privada -->
+            <div class="bg-[#211f1b] border border-[#302d26] rounded-2xl p-4 shadow-lg">
+                <div class="flex items-center justify-between border-b border-[#2e2b25] pb-3 mb-3">
+                    <div class="flex items-center gap-2">
+                        <span id="mode-indicator-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <h2 id="current-mode-title" class="font-semibold text-sm text-stone-200">Modo: Contra Ana Paula (IA)</h2>
+                    </div>
+                    <span id="turn-badge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        Vez das Brancas
+                    </span>
+                </div>
+
+                <!-- Painel Exclusivo da Sala Online (Visível apenas no Multiplayer) -->
+                <div id="online-room-box" class="hidden mb-3 bg-[#181613] border border-amber-500/30 rounded-xl p-3">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-xs text-stone-400">Código da Sala Privada:</span>
+                        <span id="connection-status" class="text-[11px] font-medium text-emerald-400 flex items-center gap-1">
+                            <i class="fa-solid fa-wifi"></i> Conectado
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <code id="display-room-code" class="flex-grow bg-[#24211c] border border-[#38332b] rounded-lg px-3 py-2 text-center font-mono text-lg font-bold tracking-widest text-amber-300 select-all">
+                            ------
+                        </code>
+                        <button onclick="copyRoomCode()" class="bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition" title="Copiar código da sala">
+                            <i class="fa-regular fa-copy"></i>
+                            <span>Copiar</span>
+                        </button>
+                    </div>
+                    <p id="room-waiting-msg" class="text-xs text-amber-200/80 mt-2 flex items-center gap-1.5">
+                        <i class="fa-solid fa-hourglass-half fa-spin text-amber-400"></i>
+                        <span>Aguardando seu amigo entrar com o código acima...</span>
+                    </p>
+                </div>
+
+                <!-- Alerta de Oferta de Empate Recebida (Online) -->
+                <div id="draw-offer-alert" class="hidden mb-3 bg-sky-950/60 border border-sky-500/40 rounded-xl p-3 flex items-center justify-between gap-2">
+                    <div class="text-xs text-sky-200">
+                        <i class="fa-solid fa-handshake mr-1 text-sky-400"></i>
+                        Seu oponente ofereceu <strong>empate</strong>.
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button onclick="respondDrawOffer(true)" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-2.5 py-1 rounded font-semibold">Aceitar</button>
+                        <button onclick="respondDrawOffer(false)" class="bg-stone-700 hover:bg-stone-600 text-stone-200 text-xs px-2.5 py-1 rounded">Recusar</button>
+                    </div>
+                </div>
+
+                <!-- Seletor Rápido de Dificuldade (Visível no modo IA) -->
+                <div id="ai-difficulty-bar" class="mb-3">
+                    <label class="block text-xs text-stone-400 mb-1.5">Nível de Dificuldade da Ana Paula:</label>
+                    <div class="grid grid-cols-4 gap-1.5">
+                        <button onclick="setAIDifficulty('easy')" data-diff="easy" class="diff-btn py-1.5 px-2 rounded-lg text-xs font-medium border transition bg-[#292620] text-stone-300 border-[#38342c] hover:border-amber-500/50">
+                            Fácil
+                        </button>
+                        <button onclick="setAIDifficulty('medium')" data-diff="medium" class="diff-btn py-1.5 px-2 rounded-lg text-xs font-semibold border transition bg-amber-600 text-white border-amber-500 shadow">
+                            Médio
+                        </button>
+                        <button onclick="setAIDifficulty('hard')" data-diff="hard" class="diff-btn py-1.5 px-2 rounded-lg text-xs font-medium border transition bg-[#292620] text-stone-300 border-[#38342c] hover:border-amber-500/50">
+                            Difícil
+                        </button>
+                        <button onclick="setAIDifficulty('master')" data-diff="master" class="diff-btn py-1.5 px-2 rounded-lg text-xs font-medium border transition bg-[#292620] text-stone-300 border-[#38342c] hover:border-amber-500/50">
+                            Mestre
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mensagem de Status / Xeque -->
+                <div id="status-message" class="text-xs sm:text-sm text-stone-300 bg-[#181613] rounded-xl px-3.5 py-2.5 border border-[#2b2822] flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-amber-400"></i>
+                    <span>Partida iniciada. Faça seu primeiro lance!</span>
+                </div>
+            </div>
+
+            <!-- Card de Histórico de Jogadas (Notação Algébrica) -->
+            <div class="bg-[#211f1b] border border-[#302d26] rounded-2xl p-4 shadow-lg flex flex-col h-[270px] sm:h-[310px]">
+                <div class="flex items-center justify-between border-b border-[#2e2b25] pb-2.5 mb-2">
+                    <h3 class="font-semibold text-sm text-stone-200 flex items-center gap-2">
+                        <i class="fa-solid fa-list-ol text-amber-400"></i>
+                        <span>Histórico de Jogadas</span>
+                    </h3>
+                    <span id="move-count-badge" class="text-xs text-stone-400">0 lances</span>
+                </div>
+
+                <div id="move-history-list" class="flex-grow overflow-y-auto space-y-1 pr-1 text-sm font-mono">
+                    <div class="h-full flex flex-col items-center justify-center text-stone-500 text-xs font-sans">
+                        <i class="fa-solid fa-chess-pawn text-2xl mb-2 opacity-40"></i>
+                        <p>Os movimentos aparecerão aqui</p>
+                    </div>
+                </div>
+
+                <!-- Ações da Partida -->
+                <div class="grid grid-cols-3 gap-2 pt-3 mt-2 border-t border-[#2e2b25]">
+                    <button id="btn-undo" onclick="undoMove()" class="bg-[#2a2721] hover:bg-[#353129] text-stone-200 py-2 px-2 rounded-xl text-xs font-medium border border-[#3b362e] flex items-center justify-center gap-1.5 transition">
+                        <i class="fa-solid fa-rotate-left text-amber-400"></i>
+                        <span>Desfazer</span>
+                    </button>
+                    <button id="btn-draw" onclick="offerDraw()" class="bg-[#2a2721] hover:bg-[#353129] text-stone-200 py-2 px-2 rounded-xl text-xs font-medium border border-[#3b362e] flex items-center justify-center gap-1.5 transition">
+                        <i class="fa-solid fa-handshake text-sky-400"></i>
+                        <span>Empate</span>
+                    </button>
+                    <button id="btn-resign" onclick="resignGame()" class="bg-[#2a2721] hover:bg-rose-950/60 hover:border-rose-500/40 text-stone-200 hover:text-rose-200 py-2 px-2 rounded-xl text-xs font-medium border border-[#3b362e] flex items-center justify-center gap-1.5 transition">
+                        <i class="fa-solid fa-flag text-rose-400"></i>
+                        <span>Desistir</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL DE SELEÇÃO DE MODO E SALAS PRIVADAS -->
+    <div id="mode-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-[#211f1b] border border-[#38332a] rounded-2xl max-w-lg w-full p-6 shadow-2xl relative animate-fade-in">
+            <button onclick="closeModeModal()" class="absolute top-4 right-4 text-stone-400 hover:text-white p-1.5 rounded-lg hover:bg-stone-800 transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                    <i class="fa-solid fa-chess-king text-xl"></i>
+                </div>
+                <div>
+                    <h2 class="font-serif-brand text-xl font-bold text-amber-100">Iniciar Nova Partida</h2>
+                    <p class="text-xs text-stone-400">Escolha jogar contra Ana Paula ou convide um amigo online</p>
+                </div>
+            </div>
+
+            <!-- Abas do Modal -->
+            <div class="grid grid-cols-2 gap-2 bg-[#161512] p-1 rounded-xl border border-[#2e2b25] mb-5">
+                <button id="tab-ai" onclick="switchModalTab('ai')" class="py-2 rounded-lg text-xs sm:text-sm font-semibold bg-amber-600 text-white shadow transition">
+                    <i class="fa-solid fa-robot mr-1.5"></i>Contra Ana Paula
+                </button>
+                <button id="tab-online" onclick="switchModalTab('online')" class="py-2 rounded-lg text-xs sm:text-sm font-semibold text-stone-400 hover:text-stone-200 transition">
+                    <i class="fa-solid fa-users mr-1.5"></i>Sala Privada Online
+                </button>
+            </div>
+
+            <!-- CONTEÚDO ABA 1: CONTRA A IA -->
+            <div id="panel-ai" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-stone-300 mb-2">Selecione o Nível de Desafio:</label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button onclick="selectModalDiff('easy')" data-mdiff="easy" class="mdiff-card p-3 rounded-xl border border-[#36322a] bg-[#191714] text-left hover:border-amber-500/50 transition">
+                            <div class="font-semibold text-sm text-emerald-400">🌱 Fácil</div>
+                            <div class="text-[11px] text-stone-400 mt-0.5">Ideal para aprender e treinar táticas básicas.</div>
+                        </button>
+                        <button onclick="selectModalDiff('medium')" data-mdiff="medium" class="mdiff-card p-3 rounded-xl border-2 border-amber-500 bg-amber-500/10 text-left transition">
+                            <div class="font-semibold text-sm text-amber-300">⚔️ Médio</div>
+                            <div class="text-[11px] text-stone-300 mt-0.5">Jogo equilibrado com visão tática intermediária.</div>
+                        </button>
+                        <button onclick="selectModalDiff('hard')" data-mdiff="hard" class="mdiff-card p-3 rounded-xl border border-[#36322a] bg-[#191714] text-left hover:border-amber-500/50 transition">
+                            <div class="font-semibold text-sm text-orange-400">🔥 Difícil</div>
+                            <div class="text-[11px] text-stone-400 mt-0.5">Cálculo profundo e controle posicional rigoroso.</div>
+                        </button>
+                        <button onclick="selectModalDiff('master')" data-mdiff="master" class="mdiff-card p-3 rounded-xl border border-[#36322a] bg-[#191714] text-left hover:border-amber-500/50 transition">
+                            <div class="font-semibold text-sm text-rose-400">👑 Mestre</div>
+                            <div class="text-[11px] text-stone-400 mt-0.5">Força máxima com poda Alpha-Beta avançada.</div>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-stone-300 mb-2">Escolha suas Peças:</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="selectModalColor('w')" data-mcolor="w" class="mcolor-btn py-2 px-3 rounded-xl border-2 border-amber-500 bg-amber-500/15 text-xs font-semibold text-white flex items-center justify-center gap-2">
+                            <span class="w-3.5 h-3.5 rounded-full bg-white border border-stone-400 inline-block"></span> Brancas
+                        </button>
+                        <button onclick="selectModalColor('random')" data-mcolor="random" class="mcolor-btn py-2 px-3 rounded-xl border border-[#36322a] bg-[#191714] text-xs font-medium text-stone-300 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-shuffle text-amber-400"></i> Aleatório
+                        </button>
+                        <button onclick="selectModalColor('b')" data-mcolor="b" class="mcolor-btn py-2 px-3 rounded-xl border border-[#36322a] bg-[#191714] text-xs font-medium text-stone-300 flex items-center justify-center gap-2">
+                            <span class="w-3.5 h-3.5 rounded-full bg-stone-900 border border-stone-500 inline-block"></span> Pretas
+                        </button>
+                    </div>
+                </div>
+
+                <button onclick="startAIGameFromModal()" class="w-full btn-gold text-white font-bold py-3 rounded-xl shadow-lg text-sm mt-2">
+                    Começar Partida contra Ana Paula
+                </button>
+            </div>
+
+            <!-- CONTEÚDO ABA 2: SALA PRIVADA ONLINE -->
+            <div id="panel-online" class="hidden space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-stone-300 mb-1">Seu Nome ou Apelido:</label>
+                    <input id="player-nickname" type="text" maxlength="18" placeholder="Ex: Carlos, Jogador 1..." class="w-full bg-[#161512] border border-[#38332a] focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none">
+                </div>
+
+                <div class="bg-[#181613] border border-[#2e2b25] rounded-xl p-4">
+                    <h4 class="text-sm font-semibold text-amber-200 mb-1">Criar uma Nova Sala Privada</h4>
+                    <p class="text-xs text-stone-400 mb-3">Você jogará com as peças <strong>Brancas</strong> e receberá um código exclusivo para enviar ao seu amigo.</p>
+                    <button id="btn-create-room" onclick="createPrivateRoom()" class="w-full btn-gold text-white font-semibold py-2.5 rounded-xl text-sm shadow flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus-circle"></i>
+                        <span>Criar Sala e Gerar Código</span>
+                    </button>
+                </div>
+
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-[#2e2b25]"></div>
+                    <span class="flex-shrink mx-3 text-xs text-stone-500 uppercase">ou entre em uma sala</span>
+                    <div class="flex-grow border-t border-[#2e2b25]"></div>
+                </div>
+
+                <div class="bg-[#181613] border border-[#2e2b25] rounded-xl p-4">
+                    <label class="block text-xs font-medium text-stone-300 mb-2">Digite o Código da Sala do seu Amigo:</label>
+                    <div class="flex gap-2">
+                        <input id="join-room-input" type="text" maxlength="6" placeholder="EX: AP4829" class="flex-grow bg-[#24211c] border border-[#3d372e] focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-center font-mono text-base font-bold uppercase tracking-widest text-amber-300 outline-none">
+                        <button id="btn-join-room" onclick="joinPrivateRoom()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition shadow">
+                            Entrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CONFIRMAÇÃO CUSTOMIZADO (Substitui alert/confirm nativos) -->
+    <div id="custom-confirm-modal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-[#24211c] border border-[#3d382f] rounded-2xl max-w-sm w-full p-5 shadow-2xl text-center">
+            <div class="w-11 h-11 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mx-auto mb-3 text-amber-400 text-lg">
+                <i class="fa-solid fa-circle-question"></i>
+            </div>
+            <h3 id="confirm-title" class="font-serif-brand text-lg font-bold text-stone-100">Confirmar Ação</h3>
+            <p id="confirm-desc" class="text-xs sm:text-sm text-stone-300 mt-1.5 mb-5">Deseja realmente prosseguir?</p>
+            <div class="flex justify-center gap-3">
+                <button onclick="closeConfirmModal()" class="flex-1 bg-[#302c25] hover:bg-[#3c372e] text-stone-200 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition">
+                    Cancelar
+                </button>
+                <button id="confirm-yes-btn" class="flex-1 btn-gold text-white py-2.5 rounded-xl text-xs sm:text-sm font-semibold shadow">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST FLUTUANTE DE NOTIFICAÇÕES -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- RODAPÉ -->
+    <footer class="bg-[#1b1915] border-t border-[#2a2721] py-3 px-4 text-center text-xs text-stone-500">
+        <p>© 2026 <span class="text-amber-400/80 font-medium">Xadrez Ana Paula</span> • Desenvolvido com elegância para amantes do xadrez.</p>
+    </footer>
+
+    <!-- MÓDULO FIREBASE + LÓGICA COMPLETA DO JOGO -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // =========================================================================
+        // 1. INICIALIZAÇÃO DO FIREBASE (SALA PRIVADA ONLINE EM TEMPO REAL)
+        // =========================================================================
+        let app = null;
+        let auth = null;
+        let db = null;
+        let currentUser = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'xadrez-ana-paula';
+
+        async function initFirebase() {
+            try {
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        const cred = await signInWithCustomToken(auth, __initial_auth_token);
+                        currentUser = cred.user;
+                    } else {
+                        const cred = await signInAnonymously(auth);
+                        currentUser = cred.user;
+                    }
+                }
+            } catch (err) {
+                console.warn("Aviso na inicialização do modo online:", err);
+            }
+        }
+        initFirebase();
+
+        // =========================================================================
+        // 2. SINTETIZADOR DE ÁUDIO (WEB AUDIO API - SEM ARQUIVOS EXTERNOS)
+        // =========================================================================
+        let soundEnabled = true;
+        let audioCtx = null;
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'move') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.exponentialRampToValueAtTime(110, now + 0.08);
+                    gain.gain.setValueAtTime(0.18, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.09);
+                } else if (type === 'capture') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.exponentialRampToValueAtTime(65, now + 0.14);
+                    gain.gain.setValueAtTime(0.24, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'check') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(520, now);
+                    osc.frequency.setValueAtTime(680, now + 0.09);
+                    gain.gain.setValueAtTime(0.22, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.26);
+                } else if (type === 'gameover') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(392, now);
+                    osc.frequency.setValueAtTime(493.88, now + 0.14);
+                    osc.frequency.setValueAtTime(587.33, now + 0.28);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+                    osc.start(now);
+                    osc.stop(now + 0.66);
+                }
+            } catch (e) {}
+        }
+
+        window.toggleSound = () => {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('icon-sound');
+            icon.className = soundEnabled
+                ? 'fa-solid fa-volume-high text-amber-400'
+                : 'fa-solid fa-volume-xmark text-stone-500';
+            showToast(soundEnabled ? "Efeitos sonoros ativados" : "Som silenciado");
+        };
+
+        // =========================================================================
+        // 3. PEÇAS SVG DE ALTA NITIDEZ (ESTILO CLÁSSICO TORNEIO)
+        // =========================================================================
+        const PIECE_SVGS = {
+            wP: `<svg viewBox="0 0 45 45" class="piece-svg"><path d="M22.5 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38C17.33 16.5 16 18.59 16 21c0 2.03.94 3.84 2.41 5.03-3 1.06-7.41 5.55-7.41 13.47h23c0-7.92-4.41-12.41-7.41-13.47 1.47-1.19 2.41-3 2.41-5.03 0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z" fill="#fff" stroke="#1c1917" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+            wR: `<svg viewBox="0 0 45 45" class="piece-svg"><g fill="#fff" stroke="#1c1917" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 39h27v-3H9v3zM12 36v-4h21v4H12zM11 14V9h4v2h5V9h5v2h5V9h4v5" stroke-linecap="butt"/><path d="M34 14l-3 3H14l-3-3"/><path d="M31 17v12.5H14V17" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M31 29.5l1.5 2.5h-20l1.5-2.5"/><path d="M11 14h23" fill="none" stroke-linejoin="miter"/></g></svg>`,
+            wN: `<svg viewBox="0 0 45 45" class="piece-svg"><g fill="none" fill-rule="evenodd" stroke="#1c1917" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M 22,10 C 32.5,11 38.5,18 38,39 L 15,39 C 15,30 25,32.5 23,18" fill="#fff"/><path d="M 24,18 C 24.38,20.91 18.45,25.37 16,27 C 13,29 13.18,31.34 11,31 C 9.958,30.06 12.41,27.96 11,28 C 10,28 11.19,29.23 10,30 C 9,30 5.997,31 6,26 C 6,24 12,14 12,14 C 12,14 13.89,12.1 14,10.5 C 13.27,9.506 13.5,8.5 13.5,7.5 C 14.5,6.5 16.5,10 16.5,10 L 18.5,10 C 18.5,10 19.28,8.008 21,7 C 22,7 22,10 22,10" fill="#fff"/><path d="M 9.5 25.5 A 0.5 0.5 0 1 1 8.5,25.5 A 0.5 0.5 0 1 1 9.5 25.5 z" fill="#1c1917"/><path d="M 15 15.5 A 0.5 1.5 0 1 1 14,15.5 A 0.5 1.5 0 1 1 15 15.5 z" transform="matrix(0.866,0.5,-0.5,0.866,9.693,-5.173)" fill="#1c1917"/></g></svg>`,
+            wB: `<svg viewBox="0 0 45 45" class="piece-svg"><g fill="none" fill-rule="evenodd" stroke="#1c1917" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><g fill="#fff" stroke-linecap="butt"><path d="M9 36c3.39-.97 10.11.43 13.5-2 3.39 2.43 10.11 1.03 13.5 2 0 0 1.65.54 3 2-.68.97-1.65.99-3 .5-3.39-.97-10.11.46-13.5-1-3.39 1.46-10.11.03-13.5 1-1.354.49-2.323.47-3-.5 1.354-1.94 3-2 3-2z"/><path d="M15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2z"/><path d="M25 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 1 1 5 0z"/></g><path d="M17.5 26h10M15 30h15m-7.5-14.5v5M20 18h5" stroke-linejoin="miter"/></g></svg>`,
+            wQ: `<svg viewBox="0 0 45 45" class="piece-svg"><g fill="#fff" stroke="#1c1917" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12a2 2 0 1 1-4 0 2 2 0 1 1 4 0zM24.5 7.5a2 2 0 1 1-4 0 2 2 0 1 1 4 0zM41 12a2 2 0 1 1-4 0 2 2 0 1 1 4 0zM16 8.5a2 2 0 1 1-4 0 2 2 0 1 1 4 0zM33 9a2 2 0 1 1-4 0 2 2 0 1 1 4 0z"/><path d="M9 26c8.5-1.5 21-1.5 27 0l2-12-7 11V11l-5.5 13.5-3-15-3 15-5.5-14V25L7 14l2 12z" stroke-linecap="butt"/><path d="M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1.5 2.5-1.5 2.5-1.5 1.5.5 2.5.5 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z" stroke-linecap="butt"/><path d="M11.5 30c3.5-1 18.5-1 22 0M12 33.5c6-1 15-1 21 0" fill="none"/></g></svg>`,
+            wK: `<svg viewBox="0 0 45 45" class="piece-svg"><g fill="none" fill-rule="evenodd" stroke="#1c1917" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22.5 11.63V6M20 8h5" stroke-linejoin="miter"/><path d="M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5" fill="#fff" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M11.5 37c5.5 3.5 15.5 3.5 21 0v-7s9-4.5 6-10.5c-4-6.5-13.5-3.5-16 4V27v-3.5c-3.5-7.5-13-10.5-16-4-3 6 5 10 5 10V37z" fill="#fff"/><path d="M11.5 30c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0"/></g></svg>`,
+            bP: `<svg viewBox="0 0 45 45" class="piece-svg"><path d="M22.5 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38C17.33 16.5 16 18.59 16 21c0 2.03.94 3.84 2.41 5.03-3 1.06-7.41 5.55-7.41 13.47h23c0-7.92-4.41-12.41-7.41-13.47 1.47-1.19 2.41-3 2.41-5.03 0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z" fill="#292524" stroke="#0c0a09" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+            bR: `<svg viewBox="0 0 45 45" class="piece-svg"><g fill="#292524" stroke="#0c0a09" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 39h27v-3H9v3zM12.5 32l1.5-2.5h17l1.5 2.5h-20zM12 36v-4h21v4H12z" stroke-linecap="butt"/><path d="M14 29.5v-13h17v13H14z" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M14 16.5L11 14h23l-3 2.5H14zM11 14V9h4v2h5V9h5v2h5V9h4v5H11z" stroke-linecap="butt"/><path d="M12 35.5h21M13 31.5h19M14 29.5h17M14 16.5h17M11 14h23" fill="none" stroke="#e7e5e4" stroke-width="1" stroke-linejoin="miter"/></g></svg>`,
+            bN: `<svg viewBox="0 0 45 45" class="piece-svg"><g fill="none" fill-rule="evenodd" stroke="#0c0a09" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M 22,10 C 32.5,11 38.5,18 38,39 L 15,39 C 15,30 25,32.5 23,18" fill="#292524"/><path d="M 24,18 C 24.38,20.91 18.45,25.37 16,27 C 13,29 13.18,31.34 11,31 C 9.958,30.06 12.41,27.96 11,28 C 10,28 11.19,29.23 10,30 C 9,30 5.997,31 6,26 C 6,24 12,14 12,14 C 12,14 13.89,12.1 14,10.5 C 13.27,9.506 13.5,8.5 13.5,7.5 C 14.5,6.5 16.5,10 16.5,10 L 18.5,10 C 18.5,10 19.28,8.008 21,7 C 22,7 22,10 22,10" fill="#292524"/><path d="M 9.5 25.5 A 0.5 0.5 0 1 1 8.5,25.5 A 0.5 0.5 0 1 1 9.5 25.5 z" fill="#e7e5e4" stroke="#e7e5e4"/><path d="M 15 15.5 A 0.5 1.5 0 1 1 14,15.5 A 0.5 1.5 0 1 1 15 15.5 z" transform="matrix(0.866,0.5,-0.5,0.866,9.693,-5.173)" fill="#e7e5e4" stroke="#e7e5e4"/><path d="M 24.55,10.4 L 24.1,11.85 L 24.6,12 C 27.75,13 30.25,14.49 32.5,18.75 C 34.75,23.01 35.75,29.06 35.25,39 L 35.2,39.5 L 37.45,39.5 L 37.5,39 C 38,28.94 36.62,22.15 34.25,17.66 C 31.88,13.17 28.46,11.02 25.06,10.5 L 24.55,10.4 z" fill="#e7e5e4" stroke="none"/></g></svg>`,
+            bB: `<svg viewBox="0 0 45 45" class="piece-svg"><g fill="none" fill-rule="evenodd" stroke="#0c0a09" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><g fill="#292524" stroke-linecap="butt"><path d="M9 36c3.39-.97 10.11.43 13.5-2 3.39 2.43 10.11 1.03 13.5 2 0 0 1.65.54 3 2-.68.97-1.65.99-3 .5-3.39-.97-10.11.46-13.5-1-3.39 1.46-10.11.03-13.5 1-1.354.49-2.323.47-3-.5 1.354-1.94 3-2 3-2z"/><path d="M15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2z"/><path d="M25 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 1 1 5 0z"/></g><path d="M17.5 26h10M15 30h15m-7.5-14.5v5M20 18h5" stroke="#e7e5e4" stroke-linejoin="miter"/></g></svg>`,
+            bQ: `<svg viewBox="0 0 45 45" class="piece-svg"><g fill="#292524" stroke="#0c0a09" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><g stroke="none"><circle cx="6" cy="12" r="2.75"/><circle cx="14" cy="9" r="2.75"/><circle cx="22.5" cy="8" r="2.75"/><circle cx="31" cy="9" r="2.75"/><circle cx="39" cy="12" r="2.75"/></g><path d="M9 26c8.5-1.5 21-1.5 27 0l2.5-12.5L31 25l-.3-14.1-5.2 13.6-3-14.5-3 14.5-5.2-13.6L14 25 6.5 13.5 9 26z" stroke-linecap="butt"/><path d="M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1.5 2.5-1.5 2.5-1.5 1.5.5 2.5.5 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z" stroke-linecap="butt"/><path d="M11 38.5a35 35 1 0 0 23 0" fill="none" stroke-linecap="butt"/><path d="M11 29a35 35 1 0 1 23 0M12.5 31.5h20M11.5 34.5a35 35 1 0 0 22 0M10.5 37.5a35 35 1 0 0 24 0" fill="none" stroke="#e7e5e4"/></g></svg>`,
+            bK: `<svg viewBox="0 0 45 45" class="piece-svg"><g fill="none" fill-rule="evenodd" stroke="#0c0a09" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22.5 11.63V6" stroke-linejoin="miter"/><path d="M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5" fill="#292524" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M11.5 37c5.5 3.5 15.5 3.5 21 0v-7s9-4.5 6-10.5c-4-6.5-13.5-3.5-16 4V27v-3.5c-3.5-7.5-13-10.5-16-4-3 6 5 10 5 10V37z" fill="#292524"/><path d="M20 8h5" stroke-linejoin="miter"/><path d="M32 29.5s8.5-4 6.03-9.65C34.15 14 25 18 22.5 24.5l.01 2.1-.01-2.1C20 18 9.906 14 6.997 19.85c-2.497 5.65 4.853 9 4.853 9" stroke="#e7e5e4"/><path d="M11.5 30c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0" stroke="#e7e5e4"/></g></svg>`
+        };
+
+        // =========================================================================
+        // 4. ESTADO GLOBAL DO JOGO E VARIÁVEIS DE CONTROLE
+        // =========================================================================
+        const game = new Chess();
+        let gameMode = 'ai'; // 'ai' ou 'online'
+        let aiDifficulty = 'medium'; // 'easy', 'medium', 'hard', 'master'
+        let playerColor = 'w'; // 'w' ou 'b'
+        let boardOrientation = 'w'; // 'w' ou 'b'
+        let selectedSquare = null;
+        let legalMovesForSelected = [];
+        let lastMove = null; // { from, to }
+        let pendingPromotion = null; // { from, to }
+        let isAIThinking = false;
+        let customGameOverReason = null;
+
+        // Variáveis Multiplayer Online
+        let roomCode = null;
+        let roomUnsubscribe = null;
+        let opponentName = "Adversário";
+        let myNickname = "Você";
+
+        // Cronômetros (em segundos - 10 min padrão)
+        let whiteTime = 600;
+        let blackTime = 600;
+        let clockInterval = null;
+
+        // Estado do Modal
+        let modalSelectedDiff = 'medium';
+        let modalSelectedColor = 'w';
+
+        const DIFF_NAMES = {
+            easy: 'Fácil',
+            medium: 'Médio',
+            hard: 'Difícil',
+            master: 'Mestre'
+        };
+
+        // =========================================================================
+        // 5. INTELIGÊNCIA ARTIFICIAL "ANA PAULA" (MINIMAX + ALPHA-BETA + PST)
+        // =========================================================================
+        const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+
+        // Tabelas Posicionais (Piece-Square Tables) para jogar xadrez posicional real
+        const PST = {
+            p: [
+                [0,  0,  0,  0,  0,  0,  0,  0],
+                [50, 50, 50, 50, 50, 50, 50, 50],
+                [10, 10, 20, 30, 30, 20, 10, 10],
+                [5,  5, 10, 25, 25, 10,  5,  5],
+                [0,  0,  0, 20, 20,  0,  0,  0],
+                [5, -5,-10,  0,  0,-10, -5,  5],
+                [5, 10, 10,-20,-20, 10, 10,  5],
+                [0,  0,  0,  0,  0,  0,  0,  0]
+            ],
+            n: [
+                [-50,-40,-30,-30,-30,-30,-40,-50],
+                [-40,-20,  0,  0,  0,  0,-20,-40],
+                [-30,  0, 10, 15, 15, 10,  0,-30],
+                [-30,  5, 15, 20, 20, 15,  5,-30],
+                [-30,  0, 15, 20, 20, 15,  0,-30],
+                [-30,  5, 10, 15, 15, 10,  5,-30],
+                [-40,-20,  0,  5,  5,  0,-20,-40],
+                [-50,-40,-30,-30,-30,-30,-40,-50]
+            ],
+            b: [
+                [-20,-10,-10,-10,-10,-10,-10,-20],
+                [-10,  0,  0,  0,  0,  0,  0,-10],
+                [-10,  0,  5, 10, 10,  5,  0,-10],
+                [-10,  5,  5, 10, 10,  5,  5,-10],
+                [-10,  0, 10, 10, 10, 10,  0,-10],
+                [-10, 10, 10, 10, 10, 10, 10,-10],
+                [-10,  5,  0,  0,  0,  0,  5,-10],
+                [-20,-10,-10,-10,-10,-10,-10,-20]
+            ],
+            r: [
+                [0,  0,  0,  0,  0,  0,  0,  0],
+                [5, 10, 10, 10, 10, 10, 10,  5],
+                [-5,  0,  0,  0,  0,  0,  0, -5],
+                [-5,  0,  0,  0,  0,  0,  0, -5],
+                [-5,  0,  0,  0,  0,  0,  0, -5],
+                [-5,  0,  0,  0,  0,  0,  0, -5],
+                [-5,  0,  0,  0,  0,  0,  0, -5],
+                [0,  0,  0,  5,  5,  0,  0,  0]
+            ],
+            q: [
+                [-20,-10,-10, -5, -5,-10,-10,-20],
+                [-10,  0,  0,  0,  0,  0,  0,-10],
+                [-10,  0,  5,  5,  5,  5,  0,-10],
+                [-5,  0,  5,  5,  5,  5,  0, -5],
+                [0,  0,  5,  5,  5,  5,  0, -5],
+                [-10,  5,  5,  5,  5,  5,  0,-10],
+                [-10,  0,  5,  0,  0,  0,  0,-10],
+                [-20,-10,-10, -5, -5,-10,-10,-20]
+            ],
+            k: [
+                [-30,-40,-40,-50,-50,-40,-40,-30],
+                [-30,-40,-40,-50,-50,-40,-40,-30],
+                [-30,-40,-40,-50,-50,-40,-40,-30],
+                [-30,-40,-40,-50,-50,-40,-40,-30],
+                [-20,-30,-30,-40,-40,-30,-30,-20],
+                [-10,-20,-20,-20,-20,-20,-20,-10],
+                [20, 20,  0,  0,  0,  0, 20, 20],
+                [20, 30, 10,  0,  0, 10, 30, 20]
+            ]
+        };
+
+        function evaluateBoard(chessInstance) {
+            const board = chessInstance.board();
+            let totalEvaluation = 0;
+
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const piece = board[row][col];
+                    if (piece) {
+                        const baseVal = PIECE_VALUES[piece.type] || 0;
+                        const tableRow = piece.color === 'w' ? row : 7 - row;
+                        const posVal = (PST[piece.type] && PST[piece.type][tableRow][col]) || 0;
+                        const value = baseVal + posVal;
+                        totalEvaluation += piece.color === 'w' ? value : -value;
+                    }
+                }
+            }
+            return totalEvaluation;
+        }
+
+        function orderMoves(moves) {
+            return moves.sort((a, b) => {
+                let scoreA = 0;
+                let scoreB = 0;
+                if (a.captured) scoreA += 10 * PIECE_VALUES[a.captured] - PIECE_VALUES[a.piece];
+                if (b.captured) scoreB += 10 * PIECE_VALUES[b.captured] - PIECE_VALUES[b.piece];
+                if (a.promotion) scoreA += 800;
+                if (b.promotion) scoreB += 800;
+                return scoreB - scoreA;
+            });
+        }
+
+        function minimax(chessInstance, depth, alpha, beta, isMaximizingPlayer) {
+            if (depth === 0 || chessInstance.game_over()) {
+                if (chessInstance.in_checkmate()) {
+                    return isMaximizingPlayer ? -99999 - depth : 99999 + depth;
+                }
+                if (chessInstance.in_draw() || chessInstance.in_stalemate() || chessInstance.in_threefold_repetition()) {
+                    return 0;
+                }
+                return evaluateBoard(chessInstance);
+            }
+
+            const moves = orderMoves(chessInstance.moves({ verbose: true }));
+
+            if (isMaximizingPlayer) {
+                let maxEval = -Infinity;
+                for (const move of moves) {
+                    chessInstance.move(move);
+                    const evaluation = minimax(chessInstance, depth - 1, alpha, beta, false);
+                    chessInstance.undo();
+                    maxEval = Math.max(maxEval, evaluation);
+                    alpha = Math.max(alpha, evaluation);
+                    if (beta <= alpha) break;
+                }
+                return maxEval;
+            } else {
+                let minEval = Infinity;
+                for (const move of moves) {
+                    chessInstance.move(move);
+                    const evaluation = minimax(chessInstance, depth - 1, alpha, beta, true);
+                    chessInstance.undo();
+                    minEval = Math.min(minEval, evaluation);
+                    beta = Math.min(beta, evaluation);
+                    if (beta <= alpha) break;
+                }
+                return minEval;
+            }
+        }
+
+        function computeBestAIMove() {
+            const possibleMoves = game.moves({ verbose: true });
+            if (possibleMoves.length === 0) return null;
+
+            const aiColor = game.turn(); // 'w' ou 'b'
+            const isMaximizing = aiColor === 'w';
+
+            // Nível Fácil: mistura movimentos aleatórios com capturas simples
+            if (aiDifficulty === 'easy') {
+                if (Math.random() < 0.65) {
+                    return possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+                }
+            }
+
+            // Profundidade por dificuldade
+            const depthMap = {
+                easy: 1,
+                medium: 2,
+                hard: 3,
+                master: 3 // Com ordenação MVV-LVA + PST, profundidade 3 é rápida e muito forte no navegador
+            };
+            const depth = depthMap[aiDifficulty] || 2;
+
+            let bestMove = null;
+            let bestValue = isMaximizing ? -Infinity : Infinity;
+            const orderedMoves = orderMoves(possibleMoves);
+
+            for (const move of orderedMoves) {
+                game.move(move);
+                const boardValue = minimax(game, depth - 1, -Infinity, Infinity, !isMaximizing);
+                game.undo();
+
+                // Pequeno ruído no nível médio para variedade de aberturas
+                const jitter = aiDifficulty === 'medium' ? (Math.random() * 18 - 9) : 0;
+
+                if (isMaximizing) {
+                    if (boardValue + jitter > bestValue) {
+                        bestValue = boardValue + jitter;
+                        bestMove = move;
+                    }
+                } else {
+                    if (boardValue + jitter < bestValue) {
+                        bestValue = boardValue + jitter;
+                        bestMove = move;
+                    }
+                }
+            }
+
+            return bestMove || possibleMoves[0];
+        }
+
+        function triggerAIMoveIfNeeded() {
+            if (gameMode !== 'ai') return;
+            if (game.game_over() || customGameOverReason) return;
+            if (game.turn() === playerColor) return;
+
+            isAIThinking = true;
+            document.getElementById('ai-thinking').classList.remove('hidden');
+            document.getElementById('ai-thinking').classList.add('flex');
+
+            setTimeout(() => {
+                const aiMove = computeBestAIMove();
+                isAIThinking = false;
+                document.getElementById('ai-thinking').classList.add('hidden');
+                document.getElementById('ai-thinking').classList.remove('flex');
+
+                if (aiMove) {
+                    executeMove(aiMove.from, aiMove.to, aiMove.promotion || 'q');
+                }
+            }, 320);
+        }
+
+        // =========================================================================
+        // 6. RENDERIZAÇÃO DO TABULEIRO E INTERAÇÕES DO JOGADOR
+        // =========================================================================
+        const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+        const RANKS = ['8', '7', '6', '5', '4', '3', '2', '1'];
+
+        function renderBoard() {
+            const boardEl = document.getElementById('chessboard');
+            boardEl.innerHTML = '';
+
+            const displayRanks = boardOrientation === 'w' ? RANKS : [...RANKS].reverse();
+            const displayFiles = boardOrientation === 'w' ? FILES : [...FILES].reverse();
+
+            // Encontrar posição do rei se estiver em xeque
+            let kingInCheckSquare = null;
+            if (game.in_check()) {
+                const turn = game.turn();
+                const boardState = game.board();
+                for (let r = 0; r < 8; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const p = boardState[r][c];
+                        if (p && p.type === 'k' && p.color === turn) {
+                            kingInCheckSquare = FILES[c] + RANKS[r];
+                        }
+                    }
+                }
+            }
+
+            displayRanks.forEach((rank, rIdx) => {
+                displayFiles.forEach((file, fIdx) => {
+                    const squareName = file + rank;
+                    const fileIndex = FILES.indexOf(file);
+                    const rankIndex = RANKS.indexOf(rank);
+                    const isLight = (fileIndex + rankIndex) % 2 === 0;
+
+                    const sqDiv = document.createElement('div');
+                    sqDiv.className = `square relative flex items-center justify-center cursor-pointer ${isLight ? 'sq-light' : 'sq-dark'}`;
+                    sqDiv.dataset.square = squareName;
+
+                    // Destaques visuais
+                    if (selectedSquare === squareName) {
+                        sqDiv.classList.add('sq-selected');
+                    }
+                    if (lastMove && (lastMove.from === squareName || lastMove.to === squareName)) {
+                        sqDiv.classList.add('sq-last-move');
+                    }
+                    if (kingInCheckSquare === squareName) {
+                        sqDiv.classList.add('sq-check');
+                    }
+
+                    // Coordenadas (1-8 na borda esquerda, a-h na borda inferior)
+                    if (fIdx === 0) {
+                        const rankLabel = document.createElement('span');
+                        rankLabel.className = 'absolute top-0.5 left-1 text-[10px] sm:text-xs font-bold opacity-75 pointer-events-none';
+                        rankLabel.textContent = rank;
+                        sqDiv.appendChild(rankLabel);
+                    }
+                    if (rIdx === 7) {
+                        const fileLabel = document.createElement('span');
+                        fileLabel.className = 'absolute bottom-0.5 right-1 text-[10px] sm:text-xs font-bold opacity-75 pointer-events-none';
+                        fileLabel.textContent = file;
+                        sqDiv.appendChild(fileLabel);
+                    }
+
+                    // Peça na casa
+                    const piece = game.get(squareName);
+                    if (piece) {
+                        const pieceKey = piece.color + piece.type.toUpperCase();
+                        sqDiv.insertAdjacentHTML('beforeend', PIECE_SVGS[pieceKey]);
+                    }
+
+                    // Bolinha ou anel de movimento válido
+                    const validMove = legalMovesForSelected.find(m => m.to === squareName);
+                    if (validMove) {
+                        const hint = document.createElement('div');
+                        hint.className = piece ? 'hint-capture absolute' : 'hint-dot absolute';
+                        sqDiv.appendChild(hint);
+                    }
+
+                    sqDiv.addEventListener('click', () => handleSquareClick(squareName));
+                    boardEl.appendChild(sqDiv);
+                });
+            });
+        }
+
+        function handleSquareClick(squareName) {
+            if (game.game_over() || customGameOverReason || isAIThinking) return;
+
+            // Verificar se é a vez do jogador humano
+            if (game.turn() !== playerColor) {
+                showToast("Aguarde a vez do seu oponente!");
+                return;
+            }
+
+            // No modo online, verificar se o oponente já entrou na sala
+            if (gameMode === 'online' && opponentName === "Aguardando...") {
+                showToast("Aguarde seu amigo entrar na sala privada!");
+                return;
+            }
+
+            // Se clicou em um destino válido da peça selecionada
+            const moveOption = legalMovesForSelected.find(m => m.to === squareName);
+            if (selectedSquare && moveOption) {
+                // Verificar se é promoção de peão
+                if (moveOption.flags.includes('p')) {
+                    openPromotionModal(selectedSquare, squareName);
+                    return;
+                }
+                executeMove(selectedSquare, squareName);
+                return;
+            }
+
+            // Selecionar uma peça própria
+            const piece = game.get(squareName);
+            if (piece && piece.color === playerColor) {
+                if (selectedSquare === squareName) {
+                    selectedSquare = null;
+                    legalMovesForSelected = [];
+                } else {
+                    selectedSquare = squareName;
+                    legalMovesForSelected = game.moves({ square: squareName, verbose: true });
+                }
+                renderBoard();
+            } else {
+                selectedSquare = null;
+                legalMovesForSelected = [];
+                renderBoard();
+            }
+        }
+
+        function openPromotionModal(from, to) {
+            pendingPromotion = { from, to };
+            const container = document.getElementById('promotion-choices');
+            container.innerHTML = '';
+            const pieces = ['q', 'r', 'b', 'n'];
+            pieces.forEach(p => {
+                const btn = document.createElement('button');
+                btn.className = 'aspect-square bg-[#181613] hover:bg-amber-600/30 border border-[#3a352d] hover:border-amber-400 rounded-xl flex items-center justify-center p-1.5 transition';
+                btn.innerHTML = PIECE_SVGS[playerColor + p.toUpperCase()];
+                btn.onclick = () => {
+                    document.getElementById('promotion-modal').classList.add('hidden');
+                    executeMove(pendingPromotion.from, pendingPromotion.to, p);
+                    pendingPromotion = null;
+                };
+                container.appendChild(btn);
+            });
+            document.getElementById('promotion-modal').classList.remove('hidden');
+        }
+
+        async function executeMove(from, to, promotion = 'q') {
+            const moveResult = game.move({ from, to, promotion });
+            if (!moveResult) return;
+
+            selectedSquare = null;
+            legalMovesForSelected = [];
+            lastMove = { from: moveResult.from, to: moveResult.to };
+
+            // Som apropriado
+            if (game.in_checkmate() || game.in_draw()) {
+                playSound('gameover');
+            } else if (game.in_check()) {
+                playSound('check');
+            } else if (moveResult.captured) {
+                playSound('capture');
+            } else {
+                playSound('move');
+            }
+
+            updateAllUI();
+
+            // Sincronizar com Firestore se estiver em Sala Privada Online
+            if (gameMode === 'online' && roomCode && db && currentUser) {
+                try {
+                    const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'chess_rooms', roomCode);
+                    const statusData = evaluateEndgameState();
+                    await updateDoc(roomRef, {
+                        fen: game.fen(),
+                        pgn: game.pgn(),
+                        lastMove: lastMove,
+                        turn: game.turn(),
+                        status: statusData.isOver ? 'finished' : 'playing',
+                        winner: statusData.winner || null,
+                        endReason: statusData.reason || null,
+                        drawOfferBy: null,
+                        updatedAt: Date.now()
+                    });
+                } catch (err) {
+                    console.error("Erro ao sincronizar jogada:", err);
+                }
+            } else if (gameMode === 'ai') {
+                triggerAIMoveIfNeeded();
+            }
+        }
+
+        // =========================================================================
+        // 7. ATUALIZAÇÃO DA INTERFACE, HISTÓRICO, CAPTURAS E FIM DE JOGO
+        // =========================================================================
+        function updateAllUI() {
+            renderBoard();
+            updateMoveHistory();
+            updateCapturedPieces();
+            updateStatusAndTurn();
+        }
+
+        function updateMoveHistory() {
+            const history = game.history();
+            const listEl = document.getElementById('move-history-list');
+            document.getElementById('move-count-badge').textContent = `${history.length} ${history.length === 1 ? 'lance' : 'lances'}`;
+
+            if (history.length === 0) {
+                listEl.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-stone-500 text-xs font-sans">
+                        <i class="fa-solid fa-chess-pawn text-2xl mb-2 opacity-40"></i>
+                        <p>Os movimentos aparecerão aqui</p>
+                    </div>`;
+                return;
+            }
+
+            let html = '';
+            for (let i = 0; i < history.length; i += 2) {
+                const moveNum = Math.floor(i / 2) + 1;
+                const whiteMove = history[i] || '';
+                const blackMove = history[i + 1] || '';
+                const isLastRow = i + 2 >= history.length;
+
+                html += `
+                    <div class="grid grid-cols-12 items-center px-2.5 py-1.5 rounded-lg ${isLastRow ? 'bg-amber-500/15 text-amber-200' : 'odd:bg-[#191714] text-stone-300'}">
+                        <span class="col-span-2 text-stone-500 text-xs">${moveNum}.</span>
+                        <span class="col-span-5 font-semibold">${whiteMove}</span>
+                        <span class="col-span-5 font-semibold">${blackMove}</span>
+                    </div>
+                `;
+            }
+            listEl.innerHTML = html;
+            listEl.scrollTop = listEl.scrollHeight;
+        }
+
+        function updateCapturedPieces() {
+            const history = game.history({ verbose: true });
+            const capturedByWhite = [];
+            const capturedByBlack = [];
+
+            history.forEach(m => {
+                if (m.captured) {
+                    if (m.color === 'w') capturedByWhite.push(m.captured);
+                    else capturedByBlack.push(m.captured);
+                }
+            });
+
+            const order = { q: 1, r: 2, b: 3, n: 4, p: 5 };
+            capturedByWhite.sort((a, b) => order[a] - order[b]);
+            capturedByBlack.sort((a, b) => order[a] - order[b]);
+
+            const renderMiniIcons = (pieces, colorOfCaptured) => {
+                const unicodeMap = {
+                    w: { p: '♙', n: '♘', b: '♗', r: '♖', q: '♕' },
+                    b: { p: '♟', n: '♞', b: '♝', r: '♜', q: '♛' }
+                };
+                return pieces.map(p => `<span class="text-sm leading-none">${unicodeMap[colorOfCaptured][p]}</span>`).join('');
+            };
+
+            const bottomEl = document.getElementById('bottom-captured');
+            const topEl = document.getElementById('top-captured');
+
+            if (boardOrientation === 'w') {
+                bottomEl.innerHTML = renderMiniIcons(capturedByWhite, 'b');
+                topEl.innerHTML = renderMiniIcons(capturedByBlack, 'w');
+            } else {
+                bottomEl.innerHTML = renderMiniIcons(capturedByBlack, 'w');
+                topEl.innerHTML = renderMiniIcons(capturedByWhite, 'b');
+            }
+        }
+
+        function evaluateEndgameState() {
+            if (customGameOverReason) {
+                return {
+                    isOver: true,
+                    winner: customGameOverReason.winner,
+                    title: customGameOverReason.title,
+                    reason: customGameOverReason.reason
+                };
+            }
+            if (game.in_checkmate()) {
+                const winnerColor = game.turn() === 'w' ? 'b' : 'w';
+                const winnerText = winnerColor === 'w' ? 'Brancas' : 'Pretas';
+                return {
+                    isOver: true,
+                    winner: winnerColor,
+                    title: 'Xeque-mate!',
+                    reason: `Vitória das ${winnerText} por xeque-mate.`
+                };
+            }
+            if (game.in_stalemate()) {
+                return { isOver: true, winner: 'draw', title: 'Empate por Afogamento', reason: 'O jogador da vez não possui lances legais e não está em xeque.' };
+            }
+            if (game.in_threefold_repetition()) {
+                return { isOver: true, winner: 'draw', title: 'Empate por Repetição', reason: 'A mesma posição ocorreu três vezes.' };
+            }
+            if (game.insufficient_material()) {
+                return { isOver: true, winner: 'draw', title: 'Empate por Material Insuficiente', reason: 'Nenhuma das partes tem peças suficientes para dar xeque-mate.' };
+            }
+            if (game.in_draw()) {
+                return { isOver: true, winner: 'draw', title: 'Empate!', reason: 'Partida empatada pela regra dos 50 lances.' };
+            }
+            return { isOver: false };
+        }
+
+        function updateStatusAndTurn() {
+            const turnBadge = document.getElementById('turn-badge');
+            const statusMsg = document.getElementById('status-message');
+            const endgame = evaluateEndgameState();
+
+            if (endgame.isOver) {
+                turnBadge.textContent = 'Partida Encerrada';
+                turnBadge.className = 'text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30';
+                statusMsg.innerHTML = `<i class="fa-solid fa-trophy text-amber-400"></i> <span><strong>${endgame.title}</strong> ${endgame.reason}</span>`;
+
+                document.getElementById('gameover-title').textContent = endgame.title;
+                document.getElementById('gameover-subtitle').textContent = endgame.reason;
+                document.getElementById('gameover-banner').classList.remove('hidden');
+                return;
+            }
+
+            const isWhiteTurn = game.turn() === 'w';
+            turnBadge.textContent = isWhiteTurn ? 'Vez das Brancas' : 'Vez das Pretas';
+            turnBadge.className = isWhiteTurn
+                ? 'text-xs font-semibold px-2.5 py-1 rounded-full bg-stone-100 text-stone-900'
+                : 'text-xs font-semibold px-2.5 py-1 rounded-full bg-stone-800 text-amber-300 border border-amber-500/40';
+
+            if (game.in_check()) {
+                statusMsg.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-400"></i> <span class="text-rose-300 font-semibold">Xeque ao Rei ${isWhiteTurn ? 'Branco' : 'Preto'}!</span>`;
+            } else {
+                const who = game.turn() === playerColor ? 'Sua vez de jogar.' : 'Aguardando movimento do oponente...';
+                statusMsg.innerHTML = `<i class="fa-solid fa-chess text-amber-400"></i> <span>${who}</span>`;
+            }
+        }
+
+        window.hideGameOverBanner = () => {
+            document.getElementById('gameover-banner').classList.add('hidden');
+        };
+
+        window.flipBoard = () => {
+            boardOrientation = boardOrientation === 'w' ? 'b' : 'w';
+            updatePlayerHeaders();
+            renderBoard();
+            updateCapturedPieces();
+        };
+
+        function updatePlayerHeaders() {
+            const topName = document.getElementById('top-player-name');
+            const topBadge = document.getElementById('top-player-badge');
+            const topAvatar = document.getElementById('top-avatar');
+            const bottomName = document.getElementById('bottom-player-name');
+            const bottomBadge = document.getElementById('bottom-player-badge');
+
+            const isUserBottom = boardOrientation === playerColor;
+            const oppLabel = gameMode === 'ai'
+                ? `Ana Paula (${DIFF_NAMES[aiDifficulty]})`
+                : opponentName;
+
+            if (isUserBottom) {
+                bottomName.textContent = myNickname;
+                bottomBadge.textContent = playerColor === 'w' ? 'Brancas' : 'Pretas';
+                topName.textContent = oppLabel;
+                topBadge.textContent = playerColor === 'w' ? 'Pretas' : 'Brancas';
+            } else {
+                bottomName.textContent = oppLabel;
+                bottomBadge.textContent = playerColor === 'w' ? 'Pretas' : 'Brancas';
+                topName.textContent = myNickname;
+                topBadge.textContent = playerColor === 'w' ? 'Brancas' : 'Pretas';
+            }
+
+            topAvatar.innerHTML = gameMode === 'ai'
+                ? '<i class="fa-solid fa-robot"></i>'
+                : '<i class="fa-solid fa-user-astronaut"></i>';
+        }
+
+        // =========================================================================
+        // 8. CRONÔMETRO DA PARTIDA
+        // =========================================================================
+        function startClock() {
+            stopClock();
+            clockInterval = setInterval(() => {
+                if (game.game_over() || customGameOverReason) {
+                    stopClock();
+                    return;
+                }
+                if (gameMode === 'online' && opponentName === "Aguardando...") return;
+
+                if (game.turn() === 'w') {
+                    whiteTime = Math.max(0, whiteTime - 1);
+                    if (whiteTime === 0) {
+                        customGameOverReason = {
+                            winner: 'b',
+                            title: 'Tempo Esgotado!',
+                            reason: 'As Pretas venceram no tempo.'
+                        };
+                        playSound('gameover');
+                        updateAllUI();
+                    }
+                } else {
+                    blackTime = Math.max(0, blackTime - 1);
+                    if (blackTime === 0) {
+                        customGameOverReason = {
+                            winner: 'w',
+                            title: 'Tempo Esgotado!',
+                            reason: 'As Brancas venceram no tempo.'
+                        };
+                        playSound('gameover');
+                        updateAllUI();
+                    }
+                }
+                renderClocks();
+            }, 1000);
+        }
+
+        function stopClock() {
+            if (clockInterval) clearInterval(clockInterval);
+        }
+
+        function formatSeconds(sec) {
+            const m = Math.floor(sec / 60).toString().padStart(2, '0');
+            const s = (sec % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function renderClocks() {
+            const topClock = document.getElementById('top-clock');
+            const bottomClock = document.getElementById('bottom-clock');
+
+            const wStr = formatSeconds(whiteTime);
+            const bStr = formatSeconds(blackTime);
+
+            if (boardOrientation === 'w') {
+                bottomClock.textContent = wStr;
+                topClock.textContent = bStr;
+            } else {
+                bottomClock.textContent = bStr;
+                topClock.textContent = wStr;
+            }
+        }
+
+        // =========================================================================
+        // 9. CONTROLES DO MODO CONTRA IA E BOTÕES DE AÇÃO
+        // =========================================================================
+        window.setAIDifficulty = (level) => {
+            aiDifficulty = level;
+            document.querySelectorAll('.diff-btn').forEach(btn => {
+                if (btn.dataset.diff === level) {
+                    btn.className = 'diff-btn py-1.5 px-2 rounded-lg text-xs font-semibold border transition bg-amber-600 text-white border-amber-500 shadow';
+                } else {
+                    btn.className = 'diff-btn py-1.5 px-2 rounded-lg text-xs font-medium border transition bg-[#292620] text-stone-300 border-[#38342c] hover:border-amber-500/50';
+                }
+            });
+            updatePlayerHeaders();
+            showToast(`Dificuldade ajustada para ${DIFF_NAMES[level]}`);
+        };
+
+        window.undoMove = () => {
+            if (gameMode === 'online') {
+                showToast("Desfazer jogada não está disponível em salas privadas online.");
+                return;
+            }
+            if (isAIThinking || game.history().length === 0) return;
+
+            // Desfaz a jogada da IA e a do jogador
+            game.undo();
+            if (game.turn() !== playerColor) {
+                game.undo();
+            }
+            customGameOverReason = null;
+            selectedSquare = null;
+            legalMovesForSelected = [];
+            lastMove = null;
+            hideGameOverBanner();
+            updateAllUI();
+            showToast("Última jogada desfeita");
+        };
+
+        window.offerDraw = () => {
+            if (game.game_over() || customGameOverReason) return;
+
+            if (gameMode === 'ai') {
+                showConfirm(
+                    "Propor Empate",
+                    "Deseja encerrar esta partida contra Ana Paula como empate?",
+                    () => {
+                        customGameOverReason = {
+                            winner: 'draw',
+                            title: 'Empate Acordado',
+                            reason: 'Você e Ana Paula concordaram com o empate.'
+                        };
+                        playSound('gameover');
+                        updateAllUI();
+                    }
+                );
+            } else if (gameMode === 'online' && roomCode && db) {
+                showConfirm(
+                    "Oferecer Empate",
+                    "Enviar proposta de empate para o seu oponente na sala?",
+                    async () => {
+                        const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'chess_rooms', roomCode);
+                        await updateDoc(roomRef, { drawOfferBy: playerColor });
+                        showToast("Proposta de empate enviada!");
+                    }
+                );
+            }
+        };
+
+        window.respondDrawOffer = async (accept) => {
+            document.getElementById('draw-offer-alert').classList.add('hidden');
+            if (!roomCode || !db) return;
+            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'chess_rooms', roomCode);
+
+            if (accept) {
+                await updateDoc(roomRef, {
+                    status: 'finished',
+                    winner: 'draw',
+                    endReason: 'Empate aceito por ambos os jogadores.',
+                    drawOfferBy: null
+                });
+            } else {
+                await updateDoc(roomRef, { drawOfferBy: null });
+                showToast("Oferta de empate recusada.");
+            }
+        };
+
+        window.resignGame = () => {
+            if (game.game_over() || customGameOverReason) return;
+
+            showConfirm(
+                "Desistir da Partida",
+                "Tem certeza que deseja abandonar e conceder a vitória ao oponente?",
+                async () => {
+                    const winnerColor = playerColor === 'w' ? 'b' : 'w';
+                    const winnerText = winnerColor === 'w' ? 'Brancas' : 'Pretas';
+
+                    if (gameMode === 'online' && roomCode && db) {
+                        const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'chess_rooms', roomCode);
+                        await updateDoc(roomRef, {
+                            status: 'finished',
+                            winner: winnerColor,
+                            endReason: `${myNickname} desistiu. Vitória das ${winnerText}.`
+                        });
+                    } else {
+                        customGameOverReason = {
+                            winner: winnerColor,
+                            title: 'Você Desistiu',
+                            reason: `Vitória das ${winnerText} por desistência.`
+                        };
+                        playSound('gameover');
+                        updateAllUI();
+                    }
+                }
+            );
+        };
+
+        window.requestNewGame = async () => {
+            hideGameOverBanner();
+            if (gameMode === 'online' && roomCode && db) {
+                game.reset();
+                customGameOverReason = null;
+                lastMove = null;
+                selectedSquare = null;
+                legalMovesForSelected = [];
+                whiteTime = 600;
+                blackTime = 600;
+
+                const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'chess_rooms', roomCode);
+                await updateDoc(roomRef, {
+                    fen: game.fen(),
+                    pgn: '',
+                    lastMove: null,
+                    turn: 'w',
+                    status: 'playing',
+                    winner: null,
+                    endReason: null,
+                    drawOfferBy: null,
+                    updatedAt: Date.now()
+                });
+                showToast("Tabuleiro reiniciado para nova partida!");
+            } else {
+                resetLocalAIGame();
+            }
+        };
+
+        function resetLocalAIGame() {
+            leaveOnlineRoomCleanup();
+            gameMode = 'ai';
+            game.reset();
+            customGameOverReason = null;
+            selectedSquare = null;
+            legalMovesForSelected = [];
+            lastMove = null;
+            whiteTime = 600;
+            blackTime = 600;
+            boardOrientation = playerColor;
+            myNickname = "Você";
+
+            document.getElementById('current-mode-title').textContent = 'Modo: Contra Ana Paula (IA)';
+            document.getElementById('online-room-box').classList.add('hidden');
+            document.getElementById('ai-difficulty-bar').classList.remove('hidden');
+            document.getElementById('btn-undo').classList.remove('opacity-40', 'cursor-not-allowed');
+
+            updatePlayerHeaders();
+            renderClocks();
+            updateAllUI();
+            startClock();
+
+            if (playerColor === 'b') {
+                triggerAIMoveIfNeeded();
+            }
+        }
+
+        // =========================================================================
+        // 10. MULTIPLAYER ONLINE EM SALAS PRIVADAS (FIRESTORE REAL-TIME)
+        // =========================================================================
+        function generateRoomCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = '';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        function leaveOnlineRoomCleanup() {
+            if (roomUnsubscribe) {
+                roomUnsubscribe();
+                roomUnsubscribe = null;
+            }
+            roomCode = null;
+            document.getElementById('draw-offer-alert').classList.add('hidden');
+        }
+
+        window.createPrivateRoom = async () => {
+            if (!db || !currentUser) {
+                await initFirebase();
+                if (!db || !currentUser) {
+                    showToast("Serviço online indisponível no momento.");
+                    return;
+                }
+            }
+
+            const btn = document.getElementById('btn-create-room');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Criando sala...';
+
+            try {
+                leaveOnlineRoomCleanup();
+                const nick = document.getElementById('player-nickname').value.trim() || "Anfitrião";
+                const newCode = generateRoomCode();
+
+                game.reset();
+                customGameOverReason = null;
+                lastMove = null;
+                selectedSquare = null;
+                legalMovesForSelected = [];
+                whiteTime = 600;
+                blackTime = 600;
+
+                const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'chess_rooms', newCode);
+                await setDoc(roomRef, {
+                    roomCode: newCode,
+                    whiteId: currentUser.uid,
+                    whiteName: nick,
+                    blackId: null,
+                    blackName: null,
+                    fen: game.fen(),
+                    pgn: '',
+                    lastMove: null,
+                    turn: 'w',
+                    status: 'waiting',
+                    winner: null,
+                    endReason: null,
+                    drawOfferBy: null,
+                    createdAt: Date.now()
+                });
+
+                roomCode = newCode;
+                gameMode = 'online';
+                playerColor = 'w';
+                boardOrientation = 'w';
+                myNickname = nick;
+                opponentName = "Aguardando...";
+
+                setupOnlineRoomUI(newCode);
+                listenToRoom(newCode);
+                closeModeModal();
+                showToast(`Sala ${newCode} criada! Compartilhe o código.`);
+            } catch (err) {
+                console.error(err);
+                showToast("Erro ao criar sala privada. Tente novamente.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-plus-circle"></i> <span>Criar Sala e Gerar Código</span>';
+            }
+        };
+
+        window.joinPrivateRoom = async () => {
+            if (!db || !currentUser) {
+                await initFirebase();
+                if (!db || !currentUser) {
+                    showToast("Serviço online indisponível no momento.");
+                    return;
+                }
+            }
+
+            const inputCode = document.getElementById('join-room-input').value.trim().toUpperCase();
+            if (inputCode.length < 4) {
+                showToast("Digite um código de sala válido.");
+                return;
+            }
+
+            const btn = document.getElementById('btn-join-room');
+            btn.disabled = true;
+            btn.textContent = 'Entrando...';
+
+            try {
+                const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'chess_rooms', inputCode);
+                const snap = await getDoc(roomRef);
+
+                if (!snap.exists()) {
+                    showToast("Sala não encontrada. Verifique o código digitado.");
+                    return;
+                }
+
+                const data = snap.data();
+                const nick = document.getElementById('player-nickname').value.trim() || "Convidado";
+
+                // Se o usuário já faz parte da sala, reconectar
+                if (data.whiteId === currentUser.uid) {
+                    playerColor = 'w';
+                    myNickname = data.whiteName || nick;
+                    opponentName = data.blackName || "Aguardando...";
+                } else if (!data.blackId || data.blackId === currentUser.uid) {
+                    playerColor = 'b';
+                    myNickname = nick;
+                    opponentName = data.whiteName || "Anfitrião";
+
+                    await updateDoc(roomRef, {
+                        blackId: currentUser.uid,
+                        blackName: nick,
+                        status: data.status === 'waiting' ? 'playing' : data.status
+                    });
+                } else {
+                    showToast("Esta sala privada já está cheia (2 jogadores).");
+                    return;
+                }
+
+                leaveOnlineRoomCleanup();
+                roomCode = inputCode;
+                gameMode = 'online';
+                boardOrientation = playerColor;
+                whiteTime = 600;
+                blackTime = 600;
+
+                setupOnlineRoomUI(inputCode);
+                listenToRoom(inputCode);
+                closeModeModal();
+                showToast(`Você entrou na sala ${inputCode}!`);
+            } catch (err) {
+                console.error(err);
+                showToast("Erro ao entrar na sala.");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Entrar';
+            }
+        };
+
+        function setupOnlineRoomUI(code) {
+            document.getElementById('current-mode-title').textContent = 'Modo: Sala Privada Online';
+            document.getElementById('online-room-box').classList.remove('hidden');
+            document.getElementById('ai-difficulty-bar').classList.add('hidden');
+            document.getElementById('display-room-code').textContent = code;
+            document.getElementById('btn-undo').classList.add('opacity-40', 'cursor-not-allowed');
+            hideGameOverBanner();
+            updatePlayerHeaders();
+            renderClocks();
+            updateAllUI();
+        }
+
+        function listenToRoom(code) {
+            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'chess_rooms', code);
+
+            roomUnsubscribe = onSnapshot(roomRef, (docSnap) => {
+                if (!docSnap.exists()) return;
+                const data = docSnap.data();
+
+                // Atualizar nomes e status de espera
+                if (playerColor === 'w') {
+                    if (data.blackName) {
+                        const wasWaiting = opponentName === "Aguardando...";
+                        opponentName = data.blackName;
+                        document.getElementById('room-waiting-msg').classList.add('hidden');
+                        if (wasWaiting) {
+                            showToast(`${opponentName} entrou na sala! A partida começou.`);
+                            startClock();
+                        }
+                    } else {
+                        opponentName = "Aguardando...";
+                        document.getElementById('room-waiting-msg').classList.remove('hidden');
+                    }
+                } else {
+                    opponentName = data.whiteName || "Anfitrião";
+                    document.getElementById('room-waiting-msg').classList.add('hidden');
+                    startClock();
+                }
+
+                // Sincronizar PGN / FEN se houver atualização remota
+                if (data.pgn !== undefined && data.pgn !== game.pgn()) {
+                    if (data.pgn === '') {
+                        game.reset();
+                        hideGameOverBanner();
+                    } else {
+                        game.load_pgn(data.pgn);
+                    }
+                    lastMove = data.lastMove || null;
+                    selectedSquare = null;
+                    legalMovesForSelected = [];
+
+                    if (game.in_check()) playSound('check');
+                    else playSound('move');
+                } else if (data.fen && data.fen !== game.fen()) {
+                    game.load(data.fen);
+                    lastMove = data.lastMove || null;
+                }
+
+                // Verificar oferta de empate
+                const drawAlert = document.getElementById('draw-offer-alert');
+                if (data.drawOfferBy && data.drawOfferBy !== playerColor && data.status !== 'finished') {
+                    drawAlert.classList.remove('hidden');
+                } else {
+                    drawAlert.classList.add('hidden');
+                }
+
+                // Verificar encerramento remoto (desistência ou empate aceito)
+                if (data.status === 'finished' && !game.game_over()) {
+                    customGameOverReason = {
+                        winner: data.winner || 'draw',
+                        title: data.winner === 'draw' ? 'Empate Acordado' : 'Partida Encerrada',
+                        reason: data.endReason || 'A partida foi finalizada.'
+                    };
+                    playSound('gameover');
+                } else if (data.status === 'playing') {
+                    customGameOverReason = null;
+                }
+
+                updatePlayerHeaders();
+                updateAllUI();
+            }, (error) => {
+                console.error("Erro na sincronização em tempo real:", error);
+                document.getElementById('connection-status').innerHTML = '<i class="fa-solid fa-triangle-exclamation text-rose-400"></i> Reconectando...';
+            });
+        }
+
+        window.copyRoomCode = () => {
+            if (!roomCode) return;
+            const tempInput = document.createElement('input');
+            tempInput.value = roomCode;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showToast(`Código ${roomCode} copiado para a área de transferência!`);
+        };
+
+        // =========================================================================
+        // 11. CONTROLES DOS MODAIS E NOTIFICAÇÕES TOAST
+        // =========================================================================
+        window.openModeModal = () => {
+            document.getElementById('mode-modal').classList.remove('hidden');
+        };
+
+        window.closeModeModal = () => {
+            document.getElementById('mode-modal').classList.add('hidden');
+        };
+
+        window.switchModalTab = (tab) => {
+            const tabAi = document.getElementById('tab-ai');
+            const tabOnline = document.getElementById('tab-online');
+            const panelAi = document.getElementById('panel-ai');
+            const panelOnline = document.getElementById('panel-online');
+
+            if (tab === 'ai') {
+                tabAi.className = 'py-2 rounded-lg text-xs sm:text-sm font-semibold bg-amber-600 text-white shadow transition';
+                tabOnline.className = 'py-2 rounded-lg text-xs sm:text-sm font-semibold text-stone-400 hover:text-stone-200 transition';
+                panelAi.classList.remove('hidden');
+                panelOnline.classList.add('hidden');
+            } else {
+                tabOnline.className = 'py-2 rounded-lg text-xs sm:text-sm font-semibold bg-amber-600 text-white shadow transition';
+                tabAi.className = 'py-2 rounded-lg text-xs sm:text-sm font-semibold text-stone-400 hover:text-stone-200 transition';
+                panelOnline.classList.remove('hidden');
+                panelAi.classList.add('hidden');
+            }
+        };
+
+        window.selectModalDiff = (diff) => {
+            modalSelectedDiff = diff;
+            document.querySelectorAll('.mdiff-card').forEach(card => {
+                if (card.dataset.mdiff === diff) {
+                    card.className = 'mdiff-card p-3 rounded-xl border-2 border-amber-500 bg-amber-500/10 text-left transition';
+                } else {
+                    card.className = 'mdiff-card p-3 rounded-xl border border-[#36322a] bg-[#191714] text-left hover:border-amber-500/50 transition';
+                }
+            });
+        };
+
+        window.selectModalColor = (color) => {
+            modalSelectedColor = color;
+            document.querySelectorAll('.mcolor-btn').forEach(btn => {
+                if (btn.dataset.mcolor === color) {
+                    btn.className = 'mcolor-btn py-2 px-3 rounded-xl border-2 border-amber-500 bg-amber-500/15 text-xs font-semibold text-white flex items-center justify-center gap-2';
+                } else {
+                    btn.className = 'mcolor-btn py-2 px-3 rounded-xl border border-[#36322a] bg-[#191714] text-xs font-medium text-stone-300 flex items-center justify-center gap-2';
+                }
+            });
+        };
+
+        window.startAIGameFromModal = () => {
+            setAIDifficulty(modalSelectedDiff);
+            if (modalSelectedColor === 'random') {
+                playerColor = Math.random() < 0.5 ? 'w' : 'b';
+            } else {
+                playerColor = modalSelectedColor;
+            }
+            closeModeModal();
+            resetLocalAIGame();
+            showToast(`Nova partida contra Ana Paula (${DIFF_NAMES[aiDifficulty]})`);
+        };
+
+        function showConfirm(title, desc, onConfirm) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-desc').textContent = desc;
+            const yesBtn = document.getElementById('confirm-yes-btn');
+            yesBtn.onclick = () => {
+                closeConfirmModal();
+                onConfirm();
+            };
+            document.getElementById('custom-confirm-modal').classList.remove('hidden');
+        }
+
+        window.closeConfirmModal = () => {
+            document.getElementById('custom-confirm-modal').classList.add('hidden');
+        };
+
+        function showToast(msg) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'bg-[#26231d] border border-amber-500/40 text-amber-100 text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 transition-opacity duration-300';
+            toast.innerHTML = `<i class="fa-solid fa-chess-queen text-amber-400"></i> <span>${msg}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+
+        // =========================================================================
+        // 12. INICIALIZAÇÃO AO CARREGAR A PÁGINA
+        // =========================================================================
+        window.addEventListener('DOMContentLoaded', () => {
+            resetLocalAIGame();
+        });
+    </script>
+</body>
+</html>
